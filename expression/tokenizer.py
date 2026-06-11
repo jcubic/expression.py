@@ -42,6 +42,7 @@ class ExpressionTokenizer:
         ('AND', r'&&'),
         ('OR', r'\|\|'),
         ('POWER', r'\*\*'),
+        ('SPACESHIP', r'<=>'),
         ('LSHIFT', r'<<'),
         ('RSHIFT', r'>>'),
         ('GE', r'>='),
@@ -53,6 +54,9 @@ class ExpressionTokenizer:
         ('TIMES', r'\*'),
         ('DIV', r'/'),
         ('MOD', r'%'),
+        ('AMP', r'&'),
+        ('PIPE', r'\|'),
+        ('QUESTION', r'\?'),
         ('CARET', r'\^'),
         ('LPAREN', r'\('),
         ('RPAREN', r'\)'),
@@ -71,8 +75,8 @@ class ExpressionTokenizer:
 
     OP_TOKENS = {
         'STRICT_EQ', 'STRICT_NE', 'EQ', 'MATCH', 'NE', 'NOT', 'ASSIGN',
-        'AND', 'OR', 'POWER', 'LSHIFT', 'RSHIFT', 'GE', 'LE', 'GT', 'LT',
-        'PLUS', 'MINUS', 'TIMES', 'DIV', 'MOD', 'CARET',
+        'AND', 'OR', 'POWER', 'SPACESHIP', 'LSHIFT', 'RSHIFT', 'GE', 'LE', 'GT', 'LT',
+        'PLUS', 'MINUS', 'TIMES', 'DIV', 'MOD', 'AMP', 'PIPE', 'QUESTION', 'CARET',
         'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET', 'LBRACE', 'RBRACE',
         'COMMA', 'COLON', 'SEMICOLON',
     }

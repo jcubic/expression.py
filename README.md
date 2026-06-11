@@ -175,6 +175,68 @@ expr.evaluate('{"a": 1} == {"a": 1}')           # True
 expr.evaluate('[1, 2] != [3, 4]')                # True
 ```
 
+### Array Operators
+
+Ruby-inspired operators for concise list manipulation. When one operand is an
+array and the other is a scalar, the scalar is coerced to a single-element array.
+
+```python
+expr = Expression()
+
+# Intersection (&) — common elements, deduped, left order preserved
+expr.evaluate("[1, 1, 2, 3] & [3, 4]")     # [3]
+
+# Union (|) — combined elements, deduped
+expr.evaluate("[1, 2] | [2, 3]")           # [1, 2, 3]
+
+# Difference (-) — left elements not in right
+expr.evaluate("[1, 2, 2, 3] - [2]")        # [1, 3]
+
+# Concatenation (+) — keeps duplicates
+expr.evaluate("[1, 2] + [2, 3]")           # [1, 2, 2, 3]
+
+# Append (<<) — mutates the left operand when it is a variable
+expr.evaluate("[1, 2] << 3")               # [1, 2, 3]
+
+# Multiplication (*) — repeat with an integer
+expr.evaluate("[1, 2] * 3")                # [1, 2, 1, 2, 1, 2]
+# Join (*) — with a string separator
+expr.evaluate('["a", "b"] * "-"')          # "a-b"
+
+# Deep equality (==) and spaceship (<=>)
+expr.evaluate("[1, 2] == [1, 2]")          # True
+expr.evaluate("[1, 2] <=> [1, 3]")         # -1
+
+# Membership (in)
+expr.evaluate("2 in [1, 2, 3]")            # True
+
+# Scalar coercion
+expr.evaluate("[1, 2, 3] & 2")             # [2]
+expr.evaluate("1 + [2, 3]")                # [1, 2, 3]
+```
+
+Empty arrays are falsy (unlike JavaScript), so they work directly in boolean
+contexts:
+
+```python
+expr.evaluate("!![]")                       # False
+expr.evaluate('[] || "default"')            # "default"
+expr.evaluate("[] ? 'yes' : 'no'")          # "no"
+
+# Validator pattern: true only when at least one skill matches
+expr.variables = {"skills": ["Python", "AI"]}
+bool(expr.evaluate('skills & ["AI", "ML"]'))   # True
+```
+
+### Conditional (Ternary) Operator
+
+```python
+expr = Expression()
+
+expr.evaluate("1 > 0 ? 'yes' : 'no'")       # "yes"
+expr.evaluate("[] ? 'yes' : 'no'")          # "no"
+```
+
 ### Error Handling
 
 ```python
@@ -204,14 +266,20 @@ expr.evaluate("10 + 10;")        # 20
 
 | Precedence | Operators |
 |-----------|-----------|
+| 0 | `? :` (ternary) |
 | 1 | `\|\|` |
 | 2 | `&&` |
-| 3 | `==`, `!=`, `===`, `!==`, `=~`, `>`, `<`, `>=`, `<=` |
+| 3 | `==`, `!=`, `===`, `!==`, `=~`, `<=>`, `>`, `<`, `>=`, `<=`, `in` |
 | 4 | `<<`, `>>` |
-| 5 | `+`, `-` |
-| 6 | `*`, `/`, `%`, `[]`, implicit multiplication |
+| 5 | `+`, `-`, `\|` |
+| 6 | `*`, `/`, `%`, `&`, `[]`, implicit multiplication |
 | 7 | `!`, unary `-`, unary `+` |
 | 8 | `**`, `^` |
+
+Operators `&` (intersection), `\|` (union), `-` (difference), `+`
+(concatenation), `<<` (append), `*` (repeat/join), `==` (deep equality), `<=>`
+(spaceship), and `in` (membership) are type-dispatched: they apply array
+semantics when either operand is an array, otherwise scalar semantics.
 
 ## Development
 

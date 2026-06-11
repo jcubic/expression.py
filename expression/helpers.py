@@ -65,6 +65,12 @@ def is_array_type(value):
     return is_type('array', value)
 
 
+def to_array(value):
+    if is_array_type(value):
+        return list(value['value'])
+    return [value['value']]
+
+
 def validate_types(types, operation, obj):
     if not is_typed(obj):
         raise Exception(f"Internal error: Invalid object {obj}")

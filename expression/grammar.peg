@@ -22,7 +22,7 @@
 from expression.helpers import (
     with_type, is_typed, is_number, is_string_type, is_array_type,
     validate_number, validate_types, maybe_regex, do_check_equal,
-    do_match, do_power, loose_equal,
+    do_match, do_power, loose_equal, to_array,
 )
 """
 
@@ -50,7 +50,11 @@ variable_assignment[object]:
     | name=NAME '=' !'=' !'~' value=expr ';' { self._var_assign(name.string, value) }
     | name=NAME '=' !'=' !'~' value=expr { self._var_assign(name.string, value) }
 
-expr[object]: boolean
+expr[object]: ternary
+
+ternary[object]:
+    | a=boolean '?' b=expr ':' c=ternary { b if a['value'] else c }
+    | boolean
 
 boolean[object]:
     | a=boolean '&&' b=compare { with_type(b['value'] if a['value'] else a['value']) }
@@ -60,6 +64,7 @@ boolean[object]:
 compare[object]:
     | a=compare '===' b=bitshift { with_type(type(a['value']) == type(b['value']) and a['value'] == b['value']) }
     | a=compare '!==' b=bitshift { with_type(not (type(a['value']) == type(b['value']) and a['value'] == b['value'])) }
+    | a=compare '<=>' b=bitshift { self._spaceship(a, b) }
     | a=compare '==' b=bitshift { do_check_equal(a, b, lambda x, y: loose_equal(x, y)) }
     | a=compare '=~' b=bitshift { do_match(a, b, self.variables) }
     | a=compare '!=' b=bitshift { do_check_equal(a, b, lambda x, y: not loose_equal(x, y)) }
@@ -67,22 +72,25 @@ compare[object]:
     | a=compare '<=' b=bitshift { self._compare_op('<=', a, b, lambda x, y: x <= y) }
     | a=compare '>' b=bitshift { self._compare_op('>', a, b, lambda x, y: x > y) }
     | a=compare '<' b=bitshift { self._compare_op('<', a, b, lambda x, y: x < y) }
+    | a=compare 'in' b=bitshift { self._in(a, b) }
     | bitshift
 
 bitshift[object]:
-    | a=bitshift '<<' b=sum_expr { self._shift_op('<<', a, b, lambda x, y: x << y) }
+    | a=bitshift '<<' b=sum_expr { self._lshift(a, b) }
     | a=bitshift '>>' b=sum_expr { self._shift_op('>>', a, b, lambda x, y: x >> y) }
     | sum_expr
 
 sum_expr[object]:
     | a=sum_expr '+' b=product { self._plus(a, b) }
     | a=sum_expr '-' b=product { self._minus(a, b) }
+    | a=sum_expr '|' b=product { self._union(a, b) }
     | product
 
 product[object]:
     | a=product '*' !'*' b=unary { self._mul(a, b) }
     | a=product '/' b=unary { self._div(a, b) }
     | a=product '%' b=unary { self._mod(a, b) }
+    | a=product '&' b=unary { self._intersect(a, b) }
     | a=product '[' b=expr ']' { self._property_access(a, b) }
     | a=product b=implicit_mul { self._implicit_mul(a, b) }
     | unary
@@ -108,9 +116,9 @@ var_ref_pow[object]:
     | var_ref
 
 unary[object]:
-    | '!' a=power { with_type(not a['value']) }
-    | '-' a=power { self._unary_minus(a) }
-    | '+' a=power { self._unary_plus(a) }
+    | '!' a=unary { with_type(not a['value']) }
+    | '-' a=unary { self._unary_minus(a) }
+    | '+' a=unary { self._unary_plus(a) }
     | power
 
 power[object]:
@@ -133,7 +141,9 @@ paren_expr[object]:
 
 json_value[object]:
     | '{' a=json_obj_body '}' { with_type(a, 'array') }
+    | '{' '}' { with_type({}, 'array') }
     | '[' a=json_arr_body ']' { with_type(a, 'array') }
+    | '[' ']' { with_type([], 'array') }
 
 json_obj_body[dict]:
     | a=STRING ':' b=json_element ',' c=json_obj_body { self._merge_obj(a, b, c) }

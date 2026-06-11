@@ -20,13 +20,13 @@ import math
 from expression.parser import ExpressionParser as _GeneratedParser
 from expression.tokenizer import ExpressionTokenizer
 from expression.helpers import (
-    with_type, is_typed, is_string_type,
-    validate_number, validate_types, maybe_regex,
+    with_type, is_typed, is_string_type, is_array_type,
+    validate_number, validate_types, maybe_regex, to_array,
 )
 
 
 class ExpressionParserExt(_GeneratedParser):
-    KEYWORDS = ('true', 'false', 'null')
+    KEYWORDS = ('true', 'false', 'null', 'in')
     SOFT_KEYWORDS = ()
 
     def __init__(self, tokenizer, variables, constants, functions, source_text):
@@ -144,6 +144,8 @@ class ExpressionParserExt(_GeneratedParser):
         return with_type(fn(int(a['value']), int(b['value'])))
 
     def _plus(self, a, b):
+        if is_array_type(a) or is_array_type(b):
+            return with_type(to_array(a) + to_array(b), 'array')
         if is_string_type(b):
             return with_type(str(a['value']) + b['value'])
         validate_number('+', b)
@@ -151,14 +153,64 @@ class ExpressionParserExt(_GeneratedParser):
         return with_type(a['value'] + b['value'])
 
     def _minus(self, a, b):
+        if is_array_type(a) or is_array_type(b):
+            right = to_array(b)
+            return with_type([x for x in to_array(a) if x not in right], 'array')
         validate_number('-', b)
         validate_number('-', a)
         return with_type(a['value'] - b['value'])
 
     def _mul(self, a, b):
+        if is_array_type(a) or is_array_type(b):
+            if is_array_type(a) and is_string_type(b):
+                return with_type(b['value'].join(str(x) for x in a['value']))
+            if is_array_type(b) and is_string_type(a):
+                return with_type(a['value'].join(str(x) for x in b['value']))
+            arr = a if is_array_type(a) else b
+            num = b if is_array_type(a) else a
+            validate_number('*', num)
+            return with_type(list(arr['value']) * int(num['value']), 'array')
         validate_number('*', a)
         validate_number('*', b)
         return with_type(a['value'] * b['value'])
+
+    def _union(self, a, b):
+        result = []
+        for x in to_array(a) + to_array(b):
+            if x not in result:
+                result.append(x)
+        return with_type(result, 'array')
+
+    def _intersect(self, a, b):
+        if not is_array_type(a) and not is_array_type(b):
+            validate_number('&', a)
+            validate_number('&', b)
+            return with_type(int(a['value']) & int(b['value']))
+        right = to_array(b)
+        result = []
+        for x in to_array(a):
+            if x in right and x not in result:
+                result.append(x)
+        return with_type(result, 'array')
+
+    def _lshift(self, a, b):
+        if is_array_type(a):
+            a['value'].append(b['value'])
+            return a
+        return self._shift_op('<<', a, b, lambda x, y: x << y)
+
+    def _in(self, a, b):
+        right = b['value'] if is_array_type(b) else [b['value']]
+        return with_type(a['value'] in right)
+
+    def _spaceship(self, a, b):
+        x = a['value']
+        y = b['value']
+        if x < y:
+            return with_type(-1)
+        if x > y:
+            return with_type(1)
+        return with_type(0)
 
     def _div(self, a, b):
         validate_number('/', a)
