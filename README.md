@@ -310,8 +310,15 @@ pytest
 python -m pegen expression/grammar.peg -o expression/parser.py
 ```
 
+## History
+
+The project is a port of [expression.php](https://github.com/jcubic/expression.php).
+It was created as an alternative to [safeeval](https://pypi.org/project/safeeval/) that
+support more Ruby operators like `=~` and Array operators.
+
 ## License
 
 Copyright (C) 2026 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)
 
-Released under the GNU General Public License, version 3 or later. See [LICENSE](https://github.com/jcubic/expression.py/blob/master/LICENSE) for details.
+Released under the GNU General Public License, version 3 or later.
+See [LICENSE](https://github.com/jcubic/expression.py/blob/master/LICENSE) for details.
