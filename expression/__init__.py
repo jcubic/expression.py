@@ -175,6 +175,10 @@ class ExpressionParserExt(_GeneratedParser):
         return with_type(a['value'] * b['value'])
 
     def _union(self, a, b):
+        if not is_array_type(a) and not is_array_type(b):
+            validate_number('|', a)
+            validate_number('|', b)
+            return with_type(int(a['value']) | int(b['value']))
         result = []
         for x in to_array(a) + to_array(b):
             if x not in result:
@@ -200,8 +204,11 @@ class ExpressionParserExt(_GeneratedParser):
         return self._shift_op('<<', a, b, lambda x, y: x << y)
 
     def _in(self, a, b):
-        right = b['value'] if is_array_type(b) else [b['value']]
-        return with_type(a['value'] in right)
+        if is_array_type(b):
+            return with_type(a['value'] in b['value'])
+        if is_string_type(b):
+            return with_type(str(a['value']) in b['value'])
+        return with_type(a['value'] in [b['value']])
 
     def _spaceship(self, a, b):
         x = a['value']

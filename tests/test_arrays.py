@@ -335,3 +335,48 @@ def test_intersection_binds_tighter_than_union():
 
 def test_concat_binds_tighter_than_eq():
     assert evaluate("[1] + [2] == [1, 2]") is True
+
+
+# ----------------------------------------------------------------------
+# Scalar fallback (neither operand is an array)
+# ----------------------------------------------------------------------
+def test_scalar_bitwise_and():
+    assert evaluate("6 & 3") == 2
+    assert evaluate("12 & 10") == 8
+
+
+def test_scalar_bitwise_or():
+    assert evaluate("6 | 1") == 7
+    assert evaluate("12 | 1") == 13
+
+
+def test_scalar_bitshift_fallback():
+    assert evaluate("100 << 2") == 400
+    assert evaluate("100 >> 2") == 25
+
+
+def test_scalar_spaceship_numbers():
+    assert evaluate("5 <=> 3") == 1
+    assert evaluate("3 <=> 5") == -1
+    assert evaluate("5 <=> 5") == 0
+
+
+def test_scalar_spaceship_strings():
+    assert evaluate('"a" <=> "b"') == -1
+    assert evaluate('"b" <=> "a"') == 1
+    assert evaluate('"a" <=> "a"') == 0
+
+
+# ----------------------------------------------------------------------
+# Substring membership (in on strings)
+# ----------------------------------------------------------------------
+def test_in_substring_present():
+    assert evaluate('"py" in "python"') is True
+
+
+def test_in_substring_absent():
+    assert evaluate('"xy" in "python"') is False
+
+
+def test_in_substring_full():
+    assert evaluate('"python" in "python"') is True

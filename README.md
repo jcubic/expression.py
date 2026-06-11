@@ -207,12 +207,23 @@ expr.evaluate('["a", "b"] * "-"')          # "a-b"
 expr.evaluate("[1, 2] == [1, 2]")          # True
 expr.evaluate("[1, 2] <=> [1, 3]")         # -1
 
-# Membership (in)
+# Membership (in) — array element, or substring of a string
 expr.evaluate("2 in [1, 2, 3]")            # True
+expr.evaluate('"py" in "python"')          # True
 
 # Scalar coercion
 expr.evaluate("[1, 2, 3] & 2")             # [2]
 expr.evaluate("1 + [2, 3]")                # [1, 2, 3]
+```
+
+When neither operand is an array, these operators fall back to scalar
+semantics: `&` and `|` are bitwise AND/OR, `<<`/`>>` are bitshifts, `<=>`
+compares numbers or strings, and `+`/`-`/`*` are arithmetic.
+
+```python
+expr.evaluate("6 & 3")                      # 2  (bitwise AND)
+expr.evaluate("6 | 1")                      # 7  (bitwise OR)
+expr.evaluate("5 <=> 3")                    # 1
 ```
 
 Empty arrays are falsy (unlike JavaScript), so they work directly in boolean
