@@ -1,0 +1,181 @@
+# Copyright (C) 2026 Jakub T. Jankiewicz <https://jcu.bi/>
+#
+# This file is part of expression.py.
+#
+# expression.py is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# expression.py is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with expression.py. If not, see <https://www.gnu.org/licenses/>.
+#
+# PEG grammar for the expression evaluation language, in pegen format.
+
+@class ExpressionParser
+@subheader """\
+from expression.helpers import (
+    with_type, is_typed, is_number, is_string_type, is_array_type,
+    validate_number, validate_types, maybe_regex, do_check_equal,
+    do_match, do_power, loose_equal,
+)
+"""
+
+start[object]: a=start_rule ENDMARKER { a }
+
+start_rule[object]:
+    | function_assignment
+    | variable_assignment
+    | a=expr ';' { a }
+    | expr
+
+function_assignment[object]:
+    | name=NAME '(' params=param_list_inner ')' '=' func_rest { self._func_assign(name.string, params) }
+    | name=NAME '(' ')' '=' func_rest { self._func_assign(name.string, []) }
+
+param_list_inner[list]:
+    | a=NAME ',' b=param_list_inner { [a.string] + b }
+    | a=NAME { [a.string] }
+
+func_rest[object]:
+    | a=expr ';' { a }
+    | a=expr { a }
+
+variable_assignment[object]:
+    | name=NAME '=' !'=' !'~' value=expr ';' { self._var_assign(name.string, value) }
+    | name=NAME '=' !'=' !'~' value=expr { self._var_assign(name.string, value) }
+
+expr[object]: boolean
+
+boolean[object]:
+    | a=boolean '&&' b=compare { with_type(b['value'] if a['value'] else a['value']) }
+    | a=boolean '||' b=compare { with_type(a['value'] if a['value'] else b['value']) }
+    | compare
+
+compare[object]:
+    | a=compare '===' b=bitshift { with_type(type(a['value']) == type(b['value']) and a['value'] == b['value']) }
+    | a=compare '!==' b=bitshift { with_type(not (type(a['value']) == type(b['value']) and a['value'] == b['value'])) }
+    | a=compare '==' b=bitshift { do_check_equal(a, b, lambda x, y: loose_equal(x, y)) }
+    | a=compare '=~' b=bitshift { do_match(a, b, self.variables) }
+    | a=compare '!=' b=bitshift { do_check_equal(a, b, lambda x, y: not loose_equal(x, y)) }
+    | a=compare '>=' b=bitshift { self._compare_op('>=', a, b, lambda x, y: x >= y) }
+    | a=compare '<=' b=bitshift { self._compare_op('<=', a, b, lambda x, y: x <= y) }
+    | a=compare '>' b=bitshift { self._compare_op('>', a, b, lambda x, y: x > y) }
+    | a=compare '<' b=bitshift { self._compare_op('<', a, b, lambda x, y: x < y) }
+    | bitshift
+
+bitshift[object]:
+    | a=bitshift '<<' b=sum_expr { self._shift_op('<<', a, b, lambda x, y: x << y) }
+    | a=bitshift '>>' b=sum_expr { self._shift_op('>>', a, b, lambda x, y: x >> y) }
+    | sum_expr
+
+sum_expr[object]:
+    | a=sum_expr '+' b=product { self._plus(a, b) }
+    | a=sum_expr '-' b=product { self._minus(a, b) }
+    | product
+
+product[object]:
+    | a=product '*' !'*' b=unary { self._mul(a, b) }
+    | a=product '/' b=unary { self._div(a, b) }
+    | a=product '%' b=unary { self._mod(a, b) }
+    | a=product '[' b=expr ']' { self._property_access(a, b) }
+    | a=product b=implicit_mul { self._implicit_mul(a, b) }
+    | unary
+
+implicit_mul[object]:
+    | paren_expr_pow
+    | func_call_pow
+    | var_ref_pow
+
+paren_expr_pow[object]:
+    | a=paren_expr '**' b=value { do_power(a, b) }
+    | a=paren_expr '^' b=value { do_power(a, b) }
+    | paren_expr
+
+func_call_pow[object]:
+    | a=function_call '**' b=value { do_power(a, b) }
+    | a=function_call '^' b=value { do_power(a, b) }
+    | function_call
+
+var_ref_pow[object]:
+    | a=var_ref '**' b=value { do_power(a, b) }
+    | a=var_ref '^' b=value { do_power(a, b) }
+    | var_ref
+
+unary[object]:
+    | '!' a=power { with_type(not a['value']) }
+    | '-' a=power { self._unary_minus(a) }
+    | '+' a=power { self._unary_plus(a) }
+    | power
+
+power[object]:
+    | a=value '**' b=power { do_power(a, b) }
+    | a=value '^' b=power { do_power(a, b) }
+    | value
+
+value[object]:
+    | json_value
+    | const_value
+    | regex_value
+    | string_value
+    | number_value
+    | function_call
+    | var_ref
+    | paren_expr
+
+paren_expr[object]:
+    | '(' a=expr ')' { a }
+
+json_value[object]:
+    | '{' a=json_obj_body '}' { with_type(a, 'array') }
+    | '[' a=json_arr_body ']' { with_type(a, 'array') }
+
+json_obj_body[dict]:
+    | a=STRING ':' b=json_element ',' c=json_obj_body { self._merge_obj(a, b, c) }
+    | a=STRING ':' b=json_element { self._make_obj(a, b) }
+
+json_arr_body[list]:
+    | a=json_element ',' b=json_arr_body { [a] + b }
+    | a=json_element { [a] }
+
+json_element[object]:
+    | '{' a=json_obj_body '}' { dict(a) }
+    | '[' a=json_arr_body ']' { list(a) }
+    | a=STRING { self._json_string_val(a) }
+    | a=NUMBER { self._json_number_val(a) }
+    | 'true' { True }
+    | 'false' { False }
+    | 'null' { None }
+
+const_value[object]:
+    | 'true' { with_type(True) }
+    | 'false' { with_type(False) }
+    | 'null' { with_type(None) }
+
+regex_value[object]:
+    | a=regex_literal { with_type(a.string, 'regex') }
+
+regex_literal[object]:
+    | a=OP { a }
+
+string_value[object]:
+    | a=STRING { self._parse_string(a) }
+
+number_value[object]:
+    | a=NUMBER { self._parse_number(a) }
+
+function_call[object]:
+    | name=NAME '(' args=arg_list_inner ')' { self._call_function(name.string, args) }
+    | name=NAME '(' ')' { self._call_function(name.string, []) }
+
+arg_list_inner[list]:
+    | a=expr ',' b=arg_list_inner { [a] + b }
+    | a=expr { [a] }
+
+var_ref[object]:
+    | a=NAME { self._resolve_var(a.string) }

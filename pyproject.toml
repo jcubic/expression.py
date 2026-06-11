@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel", "pegen>=0.3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expression-py"
+version = "0.1.0"
+description = "Mathematical expression evaluation library with PEG parser"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.9"
+authors = [
+    {name = "Jakub T. Jankiewicz", email = "jcubic.jj@gmail.com"},
+]
+keywords = ["expression", "evaluator", "parser", "peg", "math"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "pegen>=0.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jcubic/expression.py"
+Repository = "https://github.com/jcubic/expression.py"
+Issues = "https://github.com/jcubic/expression.py/issues"
+
+[tool.setuptools.packages.find]
+include = ["expression*"]
+
+[tool.setuptools.package-data]
+expression = ["grammar.peg"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+extend-exclude = ["expression/parser.py"]
