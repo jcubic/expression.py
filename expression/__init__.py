@@ -170,6 +170,11 @@ class ExpressionParserExt(_GeneratedParser):
             num = b if is_array_type(a) else a
             validate_number('*', num)
             return with_type(list(arr['value']) * int(num['value']), 'array')
+        if is_string_type(a) or is_string_type(b):
+            s = a if is_string_type(a) else b
+            num = b if is_string_type(a) else a
+            validate_number('*', num)
+            return with_type(s['value'] * int(num['value']))
         validate_number('*', a)
         validate_number('*', b)
         return with_type(a['value'] * b['value'])
@@ -200,6 +205,9 @@ class ExpressionParserExt(_GeneratedParser):
     def _lshift(self, a, b):
         if is_array_type(a):
             a['value'].append(b['value'])
+            return a
+        if is_string_type(a):
+            a['value'] = a['value'] + str(b['value'])
             return a
         return self._shift_op('<<', a, b, lambda x, y: x << y)
 

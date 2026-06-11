@@ -380,3 +380,33 @@ def test_in_substring_absent():
 
 def test_in_substring_full():
     assert evaluate('"python" in "python"') is True
+
+
+# ----------------------------------------------------------------------
+# String operators (Ruby-style)
+# ----------------------------------------------------------------------
+def test_string_repeat():
+    assert evaluate('"ab" * 3') == "ababab"
+
+
+def test_string_repeat_zero():
+    assert evaluate('"ab" * 0') == ""
+
+
+def test_string_repeat_int_left():
+    assert evaluate('3 * "ab"') == "ababab"
+
+
+def test_string_append_literal():
+    assert evaluate('"a" << "b"') == "ab"
+
+
+def test_string_append_chained():
+    assert evaluate('"a" << "b" << "c"') == "abc"
+
+
+def test_string_append_mutates_variable():
+    expr = Expression()
+    expr.evaluate("s = 'a'")
+    expr.evaluate("s << 'b'")
+    assert expr.evaluate("s") == "ab"

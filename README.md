@@ -143,6 +143,11 @@ expr = Expression()
 # String literals (single or double quotes)
 expr.evaluate('"hello" + " " + "world"')  # "hello world"
 expr.evaluate("'foo' == 'foo'")            # True
+
+# Ruby-style string operators
+expr.evaluate('"ab" * 3')                  # "ababab"  (repeat)
+expr.evaluate('"a" << "b"')                # "ab"      (append; mutates a variable)
+expr.evaluate('"a" <=> "b"')               # -1        (lexicographic compare)
 ```
 
 ### Regular Expressions
